@@ -1,15 +1,21 @@
-# Parallel Audio Editor
+# Audio Editor
 
 A modern, fast audio editor built with React, TypeScript, and the Web Audio API.
 
 ## Features
 
-- **Multi-track editing**
-- **Waveform visualization** with background peak computation
-- **Drag-and-drop import** for common formats (WAV, MP3, OGG, AAC, FLAC, WebM)
-- **Clip editing**: select, move, split, duplicate, delete; fades and basic automation
-- **Transport controls** with precise, real-time playback
-- **Zoomable ruler** and responsive UI
+- **Multi-track Editing** infinite tracks and layers with snapping
+- **Drag-and-drop Import** for common formats (WAV, MP3, OGG, AAC, FLAC, WebM)
+- **Clip Editing**: select, move, split, duplicate, delete, copy, paste, undo, redo
+- **Volume Keyframing**: double click to add keyframe to volume levels
+- **Overlap Protection**: overlapping tracks will not be deleted and instead shown in red
+
+## Upcoming Features
+
+- Clips from URLs
+- Project saving
+- Project browser memory
+- Viewport movement
 
 ## Getting Started
 
@@ -29,7 +35,7 @@ npm run dev
 
 Open `http://localhost:5173` in your browser.
 
-## Technology Stack
+## Tech Stack
 
 - **React 19**
 - **TypeScript**
@@ -39,14 +45,6 @@ Open `http://localhost:5173` in your browser.
 - **Lucide React**
 - **Web Audio API**
 - **Web Workers**
-
-## Upcoming Features
-
-- Snapping
-- Clips from URLs
-- Project saving
-- Project browser memory
-- Viewport movement
 
 ## Contributing
 
