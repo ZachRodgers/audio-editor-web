@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { snapTime } from "../audio/snapping";
 
 export type AutomationPoint = { t: number; v: number };
 export type Clip = {
@@ -195,12 +196,21 @@ export const useStore = create<State>((set, get) => ({
       const targetTrackId = patch.trackId ?? original.trackId;
       const updated: Clip = { ...original, ...patch, trackId: targetTrackId };
       const tracks = s.tracks.map((t) => ({ ...t, clips: [...t.clips] }));
-      tracks[sourceTrackIndex].clips = tracks[sourceTrackIndex].clips.filter((c) => c.id !== id);
+      tracks[sourceTrackIndex].clips = tracks[sourceTrackIndex].clips.filter(
+        (c) => c.id !== id
+      );
       let destIndex = tracks.findIndex((t) => t.id === targetTrackId);
       if (destIndex === -1) destIndex = sourceTrackIndex;
-      tracks[destIndex] = { ...tracks[destIndex], clips: [...tracks[destIndex].clips, updated] };
+      tracks[destIndex] = {
+        ...tracks[destIndex],
+        clips: [...tracks[destIndex].clips, updated],
+      };
       let max = s.duration ?? 60;
-      tracks.forEach((t) => t.clips.forEach((c) => { max = Math.max(max, c.start + c.duration + 5); }));
+      tracks.forEach((t) =>
+        t.clips.forEach((c) => {
+          max = Math.max(max, c.start + c.duration + 5);
+        })
+      );
       const next = pruneUnusedTracks(tracks);
       return { tracks: next, duration: max } as Partial<State> as any;
     }),
@@ -254,7 +264,16 @@ export const useStore = create<State>((set, get) => ({
       const tidx = Math.max(0, Math.min(trackIndex ?? 0, s.tracks.length - 1));
       const track = s.tracks[tidx];
       const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      const clip: Clip = { ...s.clipboard, id, start: time, trackId: track.id };
+
+      // Apply snapping to the paste time
+      const { time: snappedTime } = snapTime(time, s.tracks, id, 0.15);
+
+      const clip: Clip = {
+        ...s.clipboard,
+        id,
+        start: snappedTime,
+        trackId: track.id,
+      };
       const prev = s.tracks;
       let next = s.tracks.map((t) =>
         t.id === track.id ? { ...t, clips: [...t.clips, clip] } : t
@@ -266,7 +285,7 @@ export const useStore = create<State>((set, get) => ({
       });
       return {
         tracks: next,
-        duration: Math.max(s.duration ?? 60, time + clip.duration + 5),
+        duration: Math.max(s.duration ?? 60, snappedTime + clip.duration + 5),
         selectedClipId: id,
       };
     }),

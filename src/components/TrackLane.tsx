@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 import { useStore } from "../state/store";
 import { drawWaveform, computePeaks } from "../audio/waveform";
 import { ensureAudioContext } from "../audio/context";
+import { snapTime } from "../audio/snapping";
 
 let openCtxMenu: HTMLDivElement | null = null;
 
@@ -15,6 +16,7 @@ export function TrackLane() {
     const keyframeClipId = useStore(s => s.keyframeClipId);
     const closeKeyframe = useStore(s => s.closeKeyframe);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [snapIndicator, setSnapIndicator] = useState<{ time: number; type: string } | null>(null);
 
     useEffect(() => {
         const el = containerRef.current; if (!el) return;
@@ -58,9 +60,11 @@ export function TrackLane() {
                     const left = b.start * pps;
                     const width = (aEnd - b.start) * pps;
                     arr.push({ left, width, top: idx * 96 + 26 });
+                    console.log('Overlap detected:', { left, width, top: idx * 96 + 26, track: t.name });
                 }
             }
         });
+        console.log('Total overlaps:', arr.length);
         return arr;
     }, [tracks, pps]);
 
@@ -123,16 +127,29 @@ export function TrackLane() {
                         <div key={t.id} className={`track absolute left-0 right-0 border-b border-dashed`} style={{ top: idx * 96, height: rowHeight as any, pointerEvents: isEditingTrack || editingTrackIndex < 0 ? 'auto' : 'none', zIndex: isEditingTrack ? 9000 : 3000, opacity: (editingTrackIndex >= 0 && !isEditingTrack) ? 0.3 : 1 }}>
                             <div className="title absolute left-2 top-1 text-xs">{t.name}</div>
                             {[...t.clips].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id)).map((c, i) => (
-                                <ClipComponent key={c.id} clip={c} pps={pps} trackIndex={idx} zIndex={(keyframeClipId === c.id ? 9500 : (100 + i))} isEditingClip={keyframeClipId === c.id} onCloseEdit={closeKeyframe} />
+                                <ClipComponent key={c.id} clip={c} pps={pps} trackIndex={idx} zIndex={(keyframeClipId === c.id ? 9500 : (100 + i))} isEditingClip={keyframeClipId === c.id} onCloseEdit={closeKeyframe} onSnapIndicator={setSnapIndicator} />
                             ))}
                         </div>
                     );
                 })}
                 <div className="newTrackZone absolute left-0 right-0 opacity-50 hover:opacity-100 transition-opacity" style={{ top: tracks.length * 96 }}>Drop here to create a track</div>
                 {overlaps.map((o, i) => (
-                    <div key={i} className="absolute bg-red-500/40 rounded pointer-events-none conflict" style={{ left: o.left, top: o.top, width: o.width }} />
+                    <div key={i} className="absolute pointer-events-none conflict z-[6000]" style={{ left: o.left, top: o.top, width: o.width, height: '58px', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderRadius: '4px' }} />
                 ))}
             </div>
+            {snapIndicator && (
+                <div
+                    className="absolute pointer-events-none z-[5000]"
+                    style={{
+                        left: snapIndicator.time * pps - 1,
+                        top: 0,
+                        bottom: 0,
+                        width: 2,
+                        background: 'rgba(59,130,246,0.8)',
+                        boxShadow: '0 0 4px rgba(59,130,246,0.5)'
+                    }}
+                />
+            )}
             <div className="playhead absolute top-0 bottom-0" style={{ left: time * pps }} />
             <div className="ghost hidden absolute h-[58px] border rounded-lg" />
             <div className="overlap hidden absolute rounded" />
@@ -140,7 +157,7 @@ export function TrackLane() {
     );
 }
 
-function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEdit }: { clip: any; pps: number; trackIndex: number; zIndex: number; isEditingClip?: boolean; onCloseEdit?: () => void }) {
+function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEdit, onSnapIndicator }: { clip: any; pps: number; trackIndex: number; zIndex: number; isEditingClip?: boolean; onCloseEdit?: () => void; onSnapIndicator?: (indicator: { time: number; type: string } | null) => void }) {
     const selectedClipId = useStore(s => s.selectedClipId);
     const selectClip = useStore(s => s.selectClip);
     const deleteClip = useStore(s => s.deleteClip);
@@ -190,12 +207,25 @@ function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEd
         let pendingTargetIdx = startTrack;
         const onMove = (ev: MouseEvent) => {
             const dx = ev.clientX - startX; const dy = ev.clientY - startY;
-            const dt = dx / pps; const newStart = Math.max(0, startTime + dt);
+            const dt = dx / pps; const rawNewStart = Math.max(0, startTime + dt);
+
+            // Apply snapping with threshold based on zoom level
+            const state = useStore.getState();
+            const snapThreshold = Math.max(0.05, 0.3 / pps); // Adjust threshold based on zoom
+            const { time: snappedTime, snapped, snapPoint } = snapTime(rawNewStart, state.tracks, clip.id, snapThreshold);
+
+            // Show snap indicator
+            if (snapped && snapPoint && onSnapIndicator) {
+                onSnapIndicator({ time: snappedTime, type: snapPoint.type });
+            } else if (onSnapIndicator) {
+                onSnapIndicator(null);
+            }
+
             const rawIdx = Math.max(0, startTrack + Math.round(dy / 96));
             pendingTargetIdx = rawIdx; // may be beyond current length
-            const cappedIdx = Math.min(rawIdx, useStore.getState().tracks.length - 1);
-            const track = useStore.getState().tracks[cappedIdx];
-            useStore.getState().updateClipTransient(clip.id, { start: newStart, trackId: track.id });
+            const cappedIdx = Math.min(rawIdx, state.tracks.length - 1);
+            const track = state.tracks[cappedIdx];
+            state.updateClipTransient(clip.id, { start: snappedTime, trackId: track.id });
         };
         const onUp = () => {
             // If user dragged beyond the last track, create just enough tracks now and move once
@@ -206,6 +236,7 @@ function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEd
             }
             const target = useStore.getState().tracks[Math.min(pendingTargetIdx, useStore.getState().tracks.length - 1)];
             if (target) useStore.getState().updateClip(clip.id, { trackId: target.id });
+            if (onSnapIndicator) onSnapIndicator(null);
             window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp);
         };
         window.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);

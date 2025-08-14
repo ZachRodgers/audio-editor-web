@@ -8,6 +8,7 @@ import { Toasts } from './components/Toasts'
 import { useStore } from './state/store'
 import { useHotkeys } from './hooks/useHotkeys'
 import { ensureAudioScheduler, onPause } from './audio/scheduler'
+import { snapTime } from './audio/snapping'
 
 export default function App() {
   const [isDark, setIsDark] = useState(true)
@@ -43,7 +44,11 @@ export default function App() {
       if (!selectedClipId) { setTime(Math.max(0, useStore.getState().transport.time + dir * fast)); } else {
         const s = useStore.getState();
         const clip = s.tracks.flatMap(t => t.clips).find(c => c.id === selectedClipId);
-        if (clip) { s.updateClip(clip.id, { start: Math.max(0, clip.start + dir * fast) }); }
+        if (clip) {
+          const newStart = Math.max(0, clip.start + dir * fast);
+          const { time: snappedTime } = snapTime(newStart, s.tracks, clip.id, 0.1);
+          s.updateClip(clip.id, { start: snappedTime });
+        }
       }
     }
     if (e.key === 'c' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (selectedClipId) useStore.getState().copyClip(selectedClipId); }
