@@ -68,6 +68,13 @@ export default function App() {
         s.pasteAt(s.transport.time, idx);
       }
     }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const s = useStore.getState();
+      if (s.selectedClipId) {
+        e.preventDefault();
+        s.deleteClip(s.selectedClipId);
+      }
+    }
     if (e.key === 's') { e.preventDefault(); const s = useStore.getState(); if (s.selectedClipId) s.splitClip(s.selectedClipId, s.transport.time); }
     if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) { e.preventDefault(); useStore.getState().undo(); }
     if ((e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) || (e.key === 'y' && (e.ctrlKey || e.metaKey))) { e.preventDefault(); useStore.getState().redo(); }

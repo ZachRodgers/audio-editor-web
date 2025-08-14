@@ -11,7 +11,7 @@ export function TrackLane() {
     const time = useStore(s => s.transport.time);
     const duration = useStore(s => s.duration ?? 60);
     const addTrack = useStore(s => s.addTrack);
-    const pasteAt = useStore(s => s.pasteAt);
+    // const pasteAt = useStore(s => s.pasteAt);
     const keyframeClipId = useStore(s => s.keyframeClipId);
     const closeKeyframe = useStore(s => s.closeKeyframe);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -131,7 +131,7 @@ export function TrackLane() {
                         </div>
                     );
                 })}
-                <div className="newTrackZone absolute left-0 right-0 opacity-50 hover:opacity-100 transition-opacity" style={{ top: tracks.length * 96, height: 96, border: `2px dashed var(--border)`, color: "var(--muted)", display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} onClick={addTrack}>Drop here to create a track</div>
+                <div className="newTrackZone absolute left-0 right-0 opacity-50 hover:opacity-100 transition-opacity" style={{ top: tracks.length * 96, height: 96, border: `2px dashed var(--border)`, color: "var(--muted)", display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default' }}>Drop here to create a track</div>
                 {overlaps.map((o, i) => (
                     <div key={i} className="absolute bg-red-500/40 rounded pointer-events-none" style={{ left: o.left, top: o.top, width: o.width, height: 58, zIndex: 10000 }} />
                 ))}
@@ -217,12 +217,10 @@ function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEd
     const handleDoubleClick = () => { openKeyframe(clip.id); };
 
     // In-place keyframe editor overlay
-    const [dragIdx, setDragIdx] = useState<number | null>(null);
+    // local hover/drag state handled inside KeyframeCanvas
     const pts = (Array.isArray(clip.automation) && clip.automation.length ? clip.automation : [{ t: 0, v: 1 }, { t: clip.duration, v: 1 }]).slice().sort((a: any, b: any) => a.t - b.t);
     const applyPts = (next: any[]) => updateClip(clip.id, { automation: next });
-    const hitIndex = (x: number, y: number, w: number, h: number) => {
-        for (let i = 0; i < pts.length; i++) { const px = (pts[i].t / clip.duration) * w, py = (1 - pts[i].v) * h; const dx = x - px, dy = y - py; if (dx * dx + dy * dy <= 12 * 12) return i; } return -1;
-    };
+    // hitIndex no longer needed here; implemented inside KeyframeCanvas
 
     return (
         <div

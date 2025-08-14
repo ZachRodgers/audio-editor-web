@@ -10,8 +10,7 @@ const playingSources = new Map<
 
 function sampleAutomation(
   automation: { t: number; v: number }[],
-  t: number,
-  duration: number
+  t: number
 ): number {
   if (!automation || automation.length === 0) return 1;
   const pts = automation.slice().sort((a, b) => a.t - b.t);
@@ -49,7 +48,7 @@ function startClipIfNeeded(clipId: string, nowSec: number) {
     const g = ctx.createGain();
     // apply track gain * automation at current offset
     const localT = offset;
-    const kf = sampleAutomation(clip.automation, localT, clip.duration);
+    const kf = sampleAutomation(clip.automation, localT);
     g.gain.value = (track.muted ? 0 : track.gain) * kf;
     src.connect(g).connect((ctx as any).destination);
     src.start(0, offset, remaining);
@@ -96,7 +95,7 @@ function tick() {
       if (!pair) return;
       const { clip, track } = pair;
       const localT = Math.max(0, clamped - clip.start);
-      const kf = sampleAutomation(clip.automation, localT, clip.duration);
+      const kf = sampleAutomation(clip.automation, localT);
       node.gain.gain.value = (track.muted ? 0 : track.gain) * kf;
     });
     // start and stop

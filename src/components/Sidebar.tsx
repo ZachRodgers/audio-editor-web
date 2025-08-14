@@ -31,7 +31,7 @@ export function Sidebar() {
                 {tracks.map((t) => {
                     const VolIcon = volIconName(t.muted ? 0 : t.gain);
                     return (
-                        <div key={t.id} className="trackRow flex items-center gap-2 rounded-xl p-2 border" style={{ background: "var(--panel2)", borderColor: "var(--border)", height: TRACK_HEIGHT - 32 }}>
+                        <div key={t.id} className="trackRow flex items-center gap-2 rounded-xl p-2 border" style={{ background: "var(--panel2)", borderColor: "var(--border)", height: TRACK_HEIGHT - 8 }}>
                             <div className="stripe w-1 h-6 rounded" style={{ background: "var(--hi)" }} />
                             <div className="tname font-semibold text-sm truncate" style={{ width: 90 }}>{t.name}</div>
                             <div className="flex-1" />
@@ -40,7 +40,7 @@ export function Sidebar() {
                         </div>
                     );
                 })}
-                <button onClick={addTrack} className="trackRow addRow border-dashed border rounded-xl p-2 text-left text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)", height: TRACK_HEIGHT - 32 }}>+ New track</button>
+                <button onClick={addTrack} className="trackRow addRow border-dashed border rounded-xl p-2 text-left text-sm" style={{ borderColor: "var(--border)", color: "var(--muted)", height: TRACK_HEIGHT - 8 }}>+ New track</button>
             </div>
             <div className="side-bottom p-2 border-t flex gap-2 justify-between" style={{ borderColor: "var(--border)" }}>
                 <IconButton title="Add track" onClick={addTrack}><Plus className="w-4 h-4" /></IconButton>

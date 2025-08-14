@@ -7,18 +7,40 @@ export function Ruler() {
     const setTime = useStore(s => s.setTime);
     const scrubbingRef = useRef(false);
 
-    const ticks = useMemo(() => {
+    const { majorTicks, minorTicks, labels } = useMemo(() => {
         const max = Math.ceil(duration);
-        let step = 1;
-        if (pxPerSecond < 120) step = 5;
-        if (pxPerSecond < 80) step = 10;
-        const pts: { x: number; label?: string; major: boolean }[] = [];
-        for (let s = 0; s <= max; s += step) {
-            const x = s * pxPerSecond;
-            const major = s % 5 === 0;
-            pts.push({ x, major, label: major ? formatTime(s) : undefined });
+        // compute major step from zoom
+        let major = 10; // seconds
+        if (pxPerSecond >= 600) major = 0.5;
+        else if (pxPerSecond >= 450) major = 1;
+        else if (pxPerSecond >= 300) major = 2;
+        else if (pxPerSecond >= 180) major = 5;
+        else if (pxPerSecond >= 120) major = 10;
+        else major = 15;
+        const minor = Math.max(major / 5, 0.1);
+
+        const majors: number[] = [];
+        const minors: number[] = [];
+        const lbls: { x: number; text: string }[] = [];
+
+        const total = Math.max(max, 1);
+        // minor ticks
+        for (let t = 0; t <= total + 1e-6; t += minor) {
+            const isMajor = Math.abs(t / major - Math.round(t / major)) < 1e-6;
+            const x = t * pxPerSecond;
+            if (isMajor) majors.push(x); else minors.push(x);
+            // labels
+            const labelEveryHalf = major <= 0.5;
+            const showHalf = labelEveryHalf && Math.abs(t * 2 - Math.round(t * 2)) < 1e-6;
+            const showWhole = Math.abs(t - Math.round(t)) < 1e-6;
+            const label5s = major >= 5 && showWhole && Math.round(t) % 5 === 0;
+            const label1s = major < 5 && showWhole;
+            const label05 = labelEveryHalf && showHalf;
+            if ((label05 || label1s || label5s) && (isMajor || label05)) {
+                lbls.push({ x, text: formatTime(t) });
+            }
         }
-        return pts;
+        return { majorTicks: majors, minorTicks: minors, labels: lbls };
     }, [pxPerSecond, duration]);
 
     useEffect(() => {
@@ -51,11 +73,14 @@ export function Ruler() {
             onContextMenu={(e) => { e.preventDefault(); }}
         >
             <div className="ticks relative flex-1 h-full">
-                {ticks.map((t, i) => (
-                    <div key={i} style={{ left: t.x, top: t.major ? 0 : 16, height: t.major ? "100%" : "50%", width: 1, position: "absolute", background: "var(--border)" }} />
+                {minorTicks.map((x, i) => (
+                    <div key={`m${i}`} style={{ left: x, top: 22, height: "30%", width: 1, position: "absolute", background: "var(--border)" }} />
                 ))}
-                {ticks.filter(t => t.label).map((t, i) => (
-                    <div key={"l" + i} className="label absolute text-xs" style={{ left: (t.x + 4), top: 8, color: "var(--muted)" }}>{t.label}</div>
+                {majorTicks.map((x, i) => (
+                    <div key={`M${i}`} style={{ left: x, top: 0, height: "100%", width: 1, position: "absolute", background: "var(--border)" }} />
+                ))}
+                {labels.map((l, i) => (
+                    <div key={`L${i}`} className="label absolute text-xs" style={{ left: (l.x + 4), top: 8, color: "var(--muted)" }}>{l.text}</div>
                 ))}
             </div>
         </div>
@@ -64,6 +89,8 @@ export function Ruler() {
 
 function formatTime(sec: number) {
     const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
+    const s = Math.round((sec % 60) * 10) / 10; // allow .5s
+    const whole = Math.floor(s);
+    const frac = Math.round((s - whole) * 10);
+    return `${m}:${whole.toString().padStart(2, "0")}${frac ? "." + frac : ""}`;
 }
