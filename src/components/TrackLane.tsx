@@ -11,11 +11,13 @@ export function TrackLane() {
     const pps = useStore(s => s.transport.pxPerSecond);
     const time = useStore(s => s.transport.time);
     const duration = useStore(s => s.duration ?? 60);
+    const setTime = useStore(s => s.setTime);
     const addTrack = useStore(s => s.addTrack);
     // const pasteAt = useStore(s => s.pasteAt);
     const keyframeClipId = useStore(s => s.keyframeClipId);
     const closeKeyframe = useStore(s => s.closeKeyframe);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [centerX, setCenterX] = useState<number>(0);
     const [snapIndicator, setSnapIndicator] = useState<{ time: number; type: string } | null>(null);
 
     useEffect(() => {
@@ -27,6 +29,20 @@ export function TrackLane() {
             drawWaveform(c, peaks);
         });
     }, [tracks, pps]);
+
+    // compute the viewport-centered playhead X within the scroller, and keep it updated
+    useEffect(() => {
+        const updateCenter = () => {
+            const host = containerRef.current; if (!host) return;
+            const rect = host.getBoundingClientRect();
+            setCenterX(window.innerWidth / 2 - rect.left);
+        };
+        updateCenter();
+        const ro = new ResizeObserver(updateCenter);
+        if (containerRef.current) ro.observe(containerRef.current);
+        window.addEventListener('resize', updateCenter);
+        return () => { ro.disconnect(); window.removeEventListener('resize', updateCenter); };
+    }, []);
 
     // ensure expanded editor is fully visible with some padding
     useEffect(() => {
@@ -76,17 +92,17 @@ export function TrackLane() {
         if (audioFiles.length === 0) { useStore.getState().toast('No audio files detected', true); return; }
         const host = e.currentTarget as HTMLDivElement;
         const rect = host.getBoundingClientRect();
-        const x = e.clientX - rect.left + host.scrollLeft;
-        const at = x / pps;
+        const x = e.clientX - rect.left;
+        const at = (x - centerX) / pps + useStore.getState().transport.time;
         const y = e.clientY - rect.top + host.scrollTop;
-        let trackIdx = Math.floor(y / 96);
+        const trackIdx = Math.floor(y / 96);
         while (trackIdx >= useStore.getState().tracks.length) { addTrack(); }
         const ctx = ensureAudioContext();
         for (let i = 0; i < audioFiles.length; i++) {
             const f = audioFiles[i];
             const buf = await f.arrayBuffer();
             let audio: AudioBuffer | null = null;
-            try { audio = await ctx.decodeAudioData(buf.slice(0)); } catch (err) { audio = null; }
+            try { audio = await ctx.decodeAudioData(buf.slice(0)); } catch { audio = null; }
             if (!audio) { useStore.getState().toast(`Could not decode ${f.name}`, true); continue; }
             const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
             const buckets = Math.max(100, Math.floor(audio.duration * pps));
@@ -95,37 +111,55 @@ export function TrackLane() {
             const track = useStore.getState().tracks[targetIndex] ?? useStore.getState().tracks[0];
             useStore.getState().addClip({ id, name: f.name.replace(/\.[^/.]+$/, ''), buffer: audio, start: at, offset: 0, duration: audio.duration, trackId: track.id, fadeIn: 0, fadeOut: 0, automation: [], peaks });
         }
-    }, [pps, addTrack]);
+    }, [pps, addTrack, centerX]);
 
     const prevent = (e: React.DragEvent) => { e.preventDefault(); };
 
     const openBackgroundMenu = (x: number, y: number, host: HTMLDivElement) => {
-        if (openCtxMenu) { try { document.body.removeChild(openCtxMenu); } catch { } openCtxMenu = null; }
+        if (openCtxMenu) { if (openCtxMenu.parentNode === document.body) document.body.removeChild(openCtxMenu); openCtxMenu = null; }
         const rect = host.getBoundingClientRect();
-        const clickX = x - rect.left + host.scrollLeft;
+        const clickX = x - rect.left;
         const clickY = y - rect.top + host.scrollTop;
-        const at = clickX / pps;
-        let trackIdx = Math.floor(clickY / 96);
+        const at = (clickX - centerX) / pps + useStore.getState().transport.time;
+        const trackIdx = Math.floor(clickY / 96);
         while (trackIdx >= useStore.getState().tracks.length) { useStore.getState().addTrack(); }
         const menu = document.createElement('div');
         menu.className = 'ctxmenu';
         menu.style.left = `${x}px`; menu.style.top = `${y}px`;
         const addItem = (label: string, cb: () => void) => { const i = document.createElement('div'); i.textContent = label; i.className = 'ctx-item'; i.onclick = () => { cb(); cleanup(); }; menu.appendChild(i); };
-        const cleanup = () => { if (openCtxMenu) { try { document.body.removeChild(openCtxMenu); } catch { } openCtxMenu = null; window.removeEventListener('click', cleanup); } };
+        const cleanup = () => { if (openCtxMenu) { if (openCtxMenu.parentNode === document.body) document.body.removeChild(openCtxMenu); openCtxMenu = null; window.removeEventListener('click', cleanup); } };
         addItem('Paste', () => useStore.getState().pasteAt(at, trackIdx));
         addItem('Split', () => useStore.getState().splitAllAt(useStore.getState().transport.time));
         document.body.appendChild(menu); openCtxMenu = menu; setTimeout(() => window.addEventListener('click', cleanup), 0);
     };
 
+    const baseHeight = (tracks.length + 1) * 96;
+    const timelineHeight = editingTrackIndex >= 0 ? `calc(${baseHeight}px + 75vh - 96px)` : baseHeight;
+
     return (
-        <div ref={containerRef} className={`scroller relative flex-1 overflow-auto ${keyframeClipId ? 'pointer-events-auto' : ''}`} onDragOver={prevent} onDragEnter={prevent} onDrop={onDrop} onContextMenu={(e) => { e.preventDefault(); const host = e.currentTarget as HTMLDivElement; openBackgroundMenu(e.clientX, e.clientY, host); }} onMouseDown={(e) => { if (keyframeClipId && !(e.target as HTMLElement).closest('.clip')) closeKeyframe(); }}>
-            <div className="timeline relative" style={{ height: (tracks.length + 1) * 96, width: (duration * pps + 200), paddingBottom: keyframeClipId ? '18vh' : 0 }}>
+        <div
+            ref={containerRef}
+            className={`scroller relative flex-1 overflow-y-auto overflow-x-hidden ${keyframeClipId ? 'pointer-events-auto' : ''}`}
+            onWheel={(e) => {
+                if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                    e.preventDefault();
+                    const dt = e.deltaX / pps;
+                    setTime(Math.max(0, useStore.getState().transport.time + dt));
+                }
+            }}
+            onDragOver={prevent}
+            onDragEnter={prevent}
+            onDrop={onDrop}
+            onContextMenu={(e) => { e.preventDefault(); const host = e.currentTarget as HTMLDivElement; openBackgroundMenu(e.clientX, e.clientY, host); }}
+            onMouseDown={(e) => { if (keyframeClipId && !(e.target as HTMLElement).closest('.clip')) closeKeyframe(); }}
+        >
+            <div className="timeline relative" style={{ height: timelineHeight as any, width: (duration * pps + 200), paddingBottom: keyframeClipId ? '18vh' : 0, transform: `translateX(${centerX - time * pps}px)`, willChange: 'transform', overflowX: 'hidden', overflowY: 'visible' }}>
                 {tracks.map((t, idx) => {
                     const isEditingTrack = idx === editingTrackIndex;
                     const rowHeight = isEditingTrack ? '75vh' : '96px';
                     return (
                         <div key={t.id} className={`track absolute left-0 right-0 border-b border-dashed`} style={{ top: idx * 96, height: rowHeight as any, pointerEvents: isEditingTrack || editingTrackIndex < 0 ? 'auto' : 'none', zIndex: isEditingTrack ? 9000 : 3000, opacity: (editingTrackIndex >= 0 && !isEditingTrack) ? 0.3 : 1 }}>
-                            <div className="title absolute left-2 top-1 text-xs">{t.name}</div>
+                            <div className="title absolute left-0 top-1 text-xs pl-2 pr-2 bg-[var(--panel)]" style={{ transform: `translateX(${time * pps - centerX}px)`, zIndex: 1 }}>{t.name}</div>
                             {[...t.clips].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id)).map((c, i) => (
                                 <ClipComponent key={c.id} clip={c} pps={pps} trackIndex={idx} zIndex={(keyframeClipId === c.id ? 9500 : (100 + i))} isEditingClip={keyframeClipId === c.id} onCloseEdit={closeKeyframe} onSnapIndicator={setSnapIndicator} />
                             ))}
@@ -136,25 +170,52 @@ export function TrackLane() {
                 {overlaps.map((o, i) => (
                     <div key={i} className="absolute pointer-events-none conflict z-[6000]" style={{ left: o.left, top: o.top, width: o.width, height: '58px', backgroundColor: 'rgba(239, 68, 68, 0.6)', borderRadius: '4px' }} />
                 ))}
+                {snapIndicator && (
+                    <div
+                        className="absolute pointer-events-none z-[5000]"
+                        style={{
+                            left: snapIndicator.time * pps - 1,
+                            top: 0,
+                            bottom: 0,
+                            width: 2,
+                            background: 'rgba(59,130,246,0.8)',
+                            boxShadow: '0 0 4px rgba(59,130,246,0.5)'
+                        }}
+                    />
+                )}
             </div>
-            {snapIndicator && (
+            <div className="playhead absolute top-0 bottom-0 pointer-events-none" style={{ left: centerX, zIndex: 12000 }}>
                 <div
-                    className="absolute pointer-events-none z-[5000]"
+                    className="absolute pointer-events-none"
                     style={{
-                        left: snapIndicator.time * pps - 1,
                         top: 0,
-                        bottom: 0,
-                        width: 2,
-                        background: 'rgba(59,130,246,0.8)',
-                        boxShadow: '0 0 4px rgba(59,130,246,0.5)'
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: 0,
+                        height: 0,
+                        borderLeft: '6px solid transparent',
+                        borderRight: '6px solid transparent',
+                        borderTop: '8px solid var(--warn)'
                     }}
                 />
-            )}
-            <div className="playhead absolute top-0 bottom-0" style={{ left: time * pps }} />
+            </div>
+            <div
+                className="pointer-events-none fixed text-xs px-2 py-0.5 rounded-md border shadow-sm bg-[var(--panel)] z-[15000]"
+                style={{ left: '50%', top: 58, transform: 'translateX(-50%)' }}
+            >
+                {formatPlayheadTime(time)}
+            </div>
             <div className="ghost hidden absolute h-[58px] border rounded-lg" />
             <div className="overlap hidden absolute rounded" />
         </div>
     );
+}
+
+function formatPlayheadTime(t: number) {
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    const cs = Math.floor((t - Math.floor(t)) * 100); // centiseconds
+    return `${m}:${s.toString().padStart(2, '0')}.${cs.toString().padStart(2, '0')}`;
 }
 
 function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEdit, onSnapIndicator }: { clip: any; pps: number; trackIndex: number; zIndex: number; isEditingClip?: boolean; onCloseEdit?: () => void; onSnapIndicator?: (indicator: { time: number; type: string } | null) => void }) {
@@ -176,7 +237,7 @@ function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEd
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault(); e.stopPropagation();
         selectClip(clip.id);
-        if (openCtxMenu) { try { document.body.removeChild(openCtxMenu); } catch { } openCtxMenu = null; }
+        if (openCtxMenu) { if (openCtxMenu.parentNode === document.body) document.body.removeChild(openCtxMenu); openCtxMenu = null; }
         const menu = document.createElement('div');
         menu.style.position = 'fixed';
         menu.style.left = `${e.clientX}px`;
@@ -188,7 +249,7 @@ function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEd
         menu.style.padding = '6px';
         menu.style.zIndex = '9999';
         const addItem = (label: string, cb: () => void) => { const item = document.createElement('div'); item.textContent = label; item.style.padding = '6px 10px'; item.style.cursor = 'pointer'; item.onmouseenter = () => (item.style.background = getComputedStyle(document.documentElement).getPropertyValue('--panel3')); item.onmouseleave = () => (item.style.background = 'transparent'); item.onclick = () => { cb(); cleanup(); }; menu.appendChild(item); };
-        const cleanup = () => { if (openCtxMenu) { try { document.body.removeChild(openCtxMenu); } catch { } openCtxMenu = null; window.removeEventListener('click', cleanup); } };
+        const cleanup = () => { if (openCtxMenu) { if (openCtxMenu.parentNode === document.body) document.body.removeChild(openCtxMenu); openCtxMenu = null; window.removeEventListener('click', cleanup); } };
         addItem('Copy', () => copyClip(clip.id));
         addItem('Paste', () => pasteAt(time));
         addItem('Duplicate', () => { copyClip(clip.id); pasteAt(time); });

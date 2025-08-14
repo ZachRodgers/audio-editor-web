@@ -1,11 +1,20 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { useStore } from "../state/store";
 
 export function Ruler() {
     const pxPerSecond = useStore(s => s.transport.pxPerSecond);
     const duration = useStore(s => s.duration ?? 60);
     const setTime = useStore(s => s.setTime);
+    const time = useStore(s => s.transport.time);
+    const playing = useStore(s => s.transport.playing);
+    const pause = useStore(s => s.pause);
+    const play = useStore(s => s.play);
     const scrubbingRef = useRef(false);
+    const scrubStartX = useRef(0);
+    const scrubStartTime = useRef(0);
+    const wasPlayingRef = useRef(false);
+    const [centerX, setCenterX] = useState(0);
+    const rulerRef = useRef<HTMLDivElement>(null);
 
     const { majorTicks, minorTicks, labels } = useMemo(() => {
         const max = Math.ceil(duration);
@@ -44,34 +53,59 @@ export function Ruler() {
     }, [pxPerSecond, duration]);
 
     useEffect(() => {
+        const updateCenter = () => {
+            const host = rulerRef.current; if (!host) return;
+            const rect = host.getBoundingClientRect();
+            setCenterX(window.innerWidth / 2 - rect.left);
+        };
+        updateCenter();
+        const ro = new ResizeObserver(updateCenter);
+        if (rulerRef.current) ro.observe(rulerRef.current);
+        window.addEventListener('resize', updateCenter);
+        return () => { ro.disconnect(); window.removeEventListener('resize', updateCenter); };
+    }, []);
+
+    useEffect(() => {
         const onMove = (e: MouseEvent) => {
             if (!scrubbingRef.current) return;
-            const host = document.querySelector('.ruler') as HTMLDivElement;
-            if (!host) return;
-            const rect = host.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            setTime(Math.max(0, x / pxPerSecond));
+            const dx = e.clientX - scrubStartX.current;
+            setTime(Math.max(0, scrubStartTime.current - dx / pxPerSecond));
             e.preventDefault();
         };
-        const onUp = () => { scrubbingRef.current = false; };
+        const onUp = () => {
+            scrubbingRef.current = false;
+            if (wasPlayingRef.current) { play(); wasPlayingRef.current = false; }
+        };
         window.addEventListener('mousemove', onMove);
         window.addEventListener('mouseup', onUp);
         return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-    }, [pxPerSecond, setTime]);
+    }, [pxPerSecond, setTime, play]);
 
     return (
         <div
+            ref={rulerRef}
             className="ruler h-9 border-b flex items-center select-none"
             onMouseDown={(e) => {
                 const host = e.currentTarget as HTMLDivElement;
                 const rect = host.getBoundingClientRect();
                 const x = e.clientX - rect.left;
-                setTime(x / pxPerSecond);
+                setTime((x - centerX) / pxPerSecond + useStore.getState().transport.time);
                 scrubbingRef.current = true;
+                scrubStartX.current = e.clientX;
+                scrubStartTime.current = useStore.getState().transport.time;
+                if (playing) { wasPlayingRef.current = true; pause(); }
             }}
             onContextMenu={(e) => { e.preventDefault(); }}
+            onWheel={(e) => {
+                if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                    e.preventDefault();
+                    const dt = e.deltaX / pxPerSecond;
+                    setTime(Math.max(0, useStore.getState().transport.time + dt));
+                }
+            }}
+            style={{ overflow: 'hidden' }}
         >
-            <div className="ticks relative flex-1 h-full">
+            <div className="ticks relative h-full" style={{ width: (duration * pxPerSecond + 200), transform: `translateX(${centerX - time * pxPerSecond}px)`, willChange: 'transform' }}>
                 {minorTicks.map((x, i) => (
                     <div key={`m${i}`} className="tick-minor" style={{ left: x }} />
                 ))}
