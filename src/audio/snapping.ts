@@ -6,9 +6,7 @@ export interface SnapPoint {
 
 export function findSnapPoints(
   tracks: any[],
-  currentClipId: string,
-  currentTime: number,
-  snapThreshold: number = 0.1
+  currentClipId: string
 ): SnapPoint[] {
   const snapPoints: SnapPoint[] = [];
 
@@ -60,12 +58,7 @@ export function snapTime(
   currentClipId: string,
   snapThreshold: number = 0.1
 ): { time: number; snapped: boolean; snapPoint?: SnapPoint } {
-  const snapPoints = findSnapPoints(
-    tracks,
-    currentClipId,
-    targetTime,
-    snapThreshold
-  );
+  const snapPoints = findSnapPoints(tracks, currentClipId);
   const closestSnap = findClosestSnap(targetTime, snapPoints, snapThreshold);
 
   if (closestSnap) {
