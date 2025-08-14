@@ -14,10 +14,10 @@ export function Toolbar({ isDark, onToggleTheme }: { isDark: boolean; onToggleTh
 
   return (
     <>
-      <div className="toolbar sticky top-0 z-10 flex items-center gap-3 p-2 border-b" style={{ background: "var(--panel)", borderColor: "var(--border)" }}>
+      <div className="toolbar sticky top-0 z-10 flex items-center gap-3 p-2 border-b">
         {/* Left group: AddMedia(+), Duplicate, Copy, Paste, Split, Delete, Undo, Redo, Zoom */}
         <div className={`flex items-center gap-2 flex-1 ${keyframeActive ? 'opacity-30 pointer-events-none' : ''}`}>
-          <label className="iconbtn inline-flex items-center justify-center w-9 h-9 rounded-xl border" title="Add media" style={{ background: "var(--panel2)", borderColor: "var(--border)" }}>
+          <label className="iconbtn inline-flex items-center justify-center w-9 h-9 rounded-xl border" title="Add media">
             <input className="hidden" accept="audio/*" multiple type="file" onChange={async (e) => {
               const files = Array.from(e.target.files || []);
               if (!files.length) return;
@@ -43,12 +43,9 @@ export function Toolbar({ isDark, onToggleTheme }: { isDark: boolean; onToggleTh
           <IconButton title="Copy" onClick={() => { const s = useStore.getState(); if (s.selectedClipId) s.copyClip(s.selectedClipId); }}><Copy className="w-4 h-4" /></IconButton>
           <IconButton title="Paste" onClick={() => { const s = useStore.getState(); let idx = 0; if (s.selectedClipId) { const ti = s.tracks.findIndex(t => t.clips.some(c => c.id === s.selectedClipId)); if (ti >= 0) idx = ti; } if (s.clipboard) s.pasteAt(s.transport.time, idx); }}><ClipboardPaste className="w-4 h-4" /></IconButton>
           <IconButton title="Split at playhead" onClick={() => { const s = useStore.getState(); if (s.selectedClipId) s.splitClip(s.selectedClipId, s.transport.time); else s.splitAllAt(s.transport.time); }}><Scissors className="w-4 h-4" /></IconButton>
-          <IconButton title="Delete" onClick={() => { const s = useStore.getState(); if (s.selectedClipId) s.deleteClip(s.selectedClipId); else { const host = document.createElement('div'); host.className = 'modal'; host.innerHTML = `<div class=\"dialog\"><header class=\"flex items-center gap-2 p-2 border-b\" style=\"border-color: var(--border)\"><div class=\"title\">Clear all clips?</div></header><div class=\"content p-3\">This will remove all clips from all tracks.</div><footer class=\"flex gap-2 justify-end p-2 border-t\" style=\"border-color: var(--border)\"><button id=\"no\" class=\"btn\">No</button><button id=\"yes\" class=\"btn\">Yes</button></footer></div>`; document.body.appendChild(host); host.querySelector('#no')?.addEventListener('click', () => { document.body.removeChild(host); }); host.querySelector('#yes')?.addEventListener('click', () => { useStore.setState(st => ({ tracks: st.tracks.map(t => ({ ...t, clips: [] })), selectedClipId: null } as any)); document.body.removeChild(host); }); } }}><Trash2 className="w-4 h-4" /></IconButton>
+          <IconButton title="Delete" onClick={() => { const s = useStore.getState(); if (s.selectedClipId) s.deleteClip(s.selectedClipId); else { const host = document.createElement('div'); host.className = 'modal'; host.innerHTML = `<div class=\"dialog\"><header class=\"flex items-center gap-2 p-2 border-b\"><div class=\"title\">Clear all clips?</div></header><div class=\"content p-3\">This will remove all clips from all tracks.</div><footer class=\"flex gap-2 justify-end p-2 border-t\"><button id=\"no\" class=\"btn\">No</button><button id=\"yes\" class=\"btn\">Yes</button></footer></div>`; document.body.appendChild(host); host.querySelector('#no')?.addEventListener('click', () => { document.body.removeChild(host); }); host.querySelector('#yes')?.addEventListener('click', () => { useStore.setState(st => ({ tracks: st.tracks.map(t => ({ ...t, clips: [] })), selectedClipId: null } as any)); document.body.removeChild(host); }); } }}><Trash2 className="w-4 h-4" /></IconButton>
           <IconButton title="Undo" onClick={() => useStore.getState().undo()}><Undo2 className="w-4 h-4" /></IconButton>
           <IconButton title="Redo" onClick={() => useStore.getState().redo()}><Redo2 className="w-4 h-4" /></IconButton>
-          <div className="iconbtn h-9 px-3 rounded-xl border flex items-center" style={{ background: "var(--panel2)", borderColor: "var(--border)" }}>
-            <input aria-label="Zoom" className="range" type="range" min={50} max={600} value={pxPerSecond} onChange={(e) => setZoom(parseInt((e.target as HTMLInputElement).value))} />
-          </div>
         </div>
 
         {/* Center group: Skip to start, Play/Pause, Next clip start */}
@@ -60,8 +57,12 @@ export function Toolbar({ isDark, onToggleTheme }: { isDark: boolean; onToggleTh
 
         {/* Right group: Keyboard, Theme */}
         <div className="flex items-center gap-2 flex-1 justify-end">
+          <div className="iconbtn h-9 px-3 rounded-xl border flex items-center">
+            <input aria-label="Zoom" className="range" type="range" min={50} max={600} value={pxPerSecond} onChange={(e) => setZoom(parseInt((e.target as HTMLInputElement).value))} />
+          </div>
           <IconButton title="Keyboard" aria-label="Keybinds" onClick={() => document.querySelector('.keybinds-modal')?.classList.remove('hidden')}><Keyboard className="w-4 h-4" /></IconButton>
           <IconButton title="Theme" aria-label="Theme" onClick={onToggleTheme}>{isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}</IconButton>
+
         </div>
       </div>
       <KeybindsModal />

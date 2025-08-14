@@ -62,7 +62,6 @@ export function Ruler() {
     return (
         <div
             className="ruler h-9 border-b flex items-center select-none"
-            style={{ background: "var(--panel3)", borderColor: "var(--border)" }}
             onMouseDown={(e) => {
                 const host = e.currentTarget as HTMLDivElement;
                 const rect = host.getBoundingClientRect();
@@ -74,13 +73,13 @@ export function Ruler() {
         >
             <div className="ticks relative flex-1 h-full">
                 {minorTicks.map((x, i) => (
-                    <div key={`m${i}`} style={{ left: x, top: 22, height: "30%", width: 1, position: "absolute", background: "var(--border)" }} />
+                    <div key={`m${i}`} className="tick-minor" style={{ left: x }} />
                 ))}
                 {majorTicks.map((x, i) => (
-                    <div key={`M${i}`} style={{ left: x, top: 0, height: "100%", width: 1, position: "absolute", background: "var(--border)" }} />
+                    <div key={`M${i}`} className="tick-major" style={{ left: x }} />
                 ))}
                 {labels.map((l, i) => (
-                    <div key={`L${i}`} className="label absolute text-xs" style={{ left: (l.x + 4), top: 8, color: "var(--muted)" }}>{l.text}</div>
+                    <div key={`L${i}`} className="label absolute text-xs" style={{ left: (l.x + 4) }}>{l.text}</div>
                 ))}
             </div>
         </div>

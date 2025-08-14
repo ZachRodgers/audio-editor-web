@@ -104,12 +104,9 @@ export function TrackLane() {
         let trackIdx = Math.floor(clickY / 96);
         while (trackIdx >= useStore.getState().tracks.length) { useStore.getState().addTrack(); }
         const menu = document.createElement('div');
-        menu.style.position = 'fixed';
+        menu.className = 'ctxmenu';
         menu.style.left = `${x}px`; menu.style.top = `${y}px`;
-        menu.style.background = getComputedStyle(document.documentElement).getPropertyValue('--panel2');
-        menu.style.border = `1px solid ${getComputedStyle(document.documentElement).getPropertyValue('--border')}`;
-        menu.style.borderRadius = '8px'; menu.style.boxShadow = 'var(--shadow)'; menu.style.padding = '6px'; menu.style.zIndex = '9999';
-        const addItem = (label: string, cb: () => void) => { const i = document.createElement('div'); i.textContent = label; i.style.padding = '6px 10px'; i.style.cursor = 'pointer'; i.onmouseenter = () => (i.style.background = getComputedStyle(document.documentElement).getPropertyValue('--panel3')); i.onmouseleave = () => (i.style.background = 'transparent'); i.onclick = () => { cb(); cleanup(); }; menu.appendChild(i); };
+        const addItem = (label: string, cb: () => void) => { const i = document.createElement('div'); i.textContent = label; i.className = 'ctx-item'; i.onclick = () => { cb(); cleanup(); }; menu.appendChild(i); };
         const cleanup = () => { if (openCtxMenu) { try { document.body.removeChild(openCtxMenu); } catch { } openCtxMenu = null; window.removeEventListener('click', cleanup); } };
         addItem('Paste', () => useStore.getState().pasteAt(at, trackIdx));
         addItem('Split', () => useStore.getState().splitAllAt(useStore.getState().transport.time));
@@ -117,26 +114,26 @@ export function TrackLane() {
     };
 
     return (
-        <div ref={containerRef} className={`scroller relative flex-1 overflow-auto ${keyframeClipId ? 'pointer-events-auto' : ''}`} style={{ background: "var(--panel)" }} onDragOver={prevent} onDragEnter={prevent} onDrop={onDrop} onContextMenu={(e) => { e.preventDefault(); const host = e.currentTarget as HTMLDivElement; openBackgroundMenu(e.clientX, e.clientY, host); }} onMouseDown={(e) => { if (keyframeClipId && !(e.target as HTMLElement).closest('.clip')) closeKeyframe(); }}>
+        <div ref={containerRef} className={`scroller relative flex-1 overflow-auto ${keyframeClipId ? 'pointer-events-auto' : ''}`} onDragOver={prevent} onDragEnter={prevent} onDrop={onDrop} onContextMenu={(e) => { e.preventDefault(); const host = e.currentTarget as HTMLDivElement; openBackgroundMenu(e.clientX, e.clientY, host); }} onMouseDown={(e) => { if (keyframeClipId && !(e.target as HTMLElement).closest('.clip')) closeKeyframe(); }}>
             <div className="timeline relative" style={{ height: (tracks.length + 1) * 96, width: (duration * pps + 200), paddingBottom: keyframeClipId ? '18vh' : 0 }}>
                 {tracks.map((t, idx) => {
                     const isEditingTrack = idx === editingTrackIndex;
                     const rowHeight = isEditingTrack ? '75vh' : '96px';
                     return (
-                        <div key={t.id} className={`track absolute left-0 right-0 border-b border-dashed`} style={{ top: idx * 96, borderColor: "var(--border)", height: rowHeight as any, transition: 'height .25s ease', pointerEvents: isEditingTrack || editingTrackIndex < 0 ? 'auto' : 'none', zIndex: isEditingTrack ? 9000 : 3000, opacity: (editingTrackIndex >= 0 && !isEditingTrack) ? 0.3 : 1 }}>
-                            <div className="title absolute left-2 top-1 text-xs" style={{ color: "var(--muted)" }}>{t.name}</div>
+                        <div key={t.id} className={`track absolute left-0 right-0 border-b border-dashed`} style={{ top: idx * 96, height: rowHeight as any, pointerEvents: isEditingTrack || editingTrackIndex < 0 ? 'auto' : 'none', zIndex: isEditingTrack ? 9000 : 3000, opacity: (editingTrackIndex >= 0 && !isEditingTrack) ? 0.3 : 1 }}>
+                            <div className="title absolute left-2 top-1 text-xs">{t.name}</div>
                             {[...t.clips].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id)).map((c, i) => (
                                 <ClipComponent key={c.id} clip={c} pps={pps} trackIndex={idx} zIndex={(keyframeClipId === c.id ? 9500 : (100 + i))} isEditingClip={keyframeClipId === c.id} onCloseEdit={closeKeyframe} />
                             ))}
                         </div>
                     );
                 })}
-                <div className="newTrackZone absolute left-0 right-0 opacity-50 hover:opacity-100 transition-opacity" style={{ top: tracks.length * 96, height: 96, border: `2px dashed var(--border)`, color: "var(--muted)", display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'default' }}>Drop here to create a track</div>
+                <div className="newTrackZone absolute left-0 right-0 opacity-50 hover:opacity-100 transition-opacity" style={{ top: tracks.length * 96 }}>Drop here to create a track</div>
                 {overlaps.map((o, i) => (
-                    <div key={i} className="absolute bg-red-500/40 rounded pointer-events-none" style={{ left: o.left, top: o.top, width: o.width, height: 58, zIndex: 10000 }} />
+                    <div key={i} className="absolute bg-red-500/40 rounded pointer-events-none conflict" style={{ left: o.left, top: o.top, width: o.width }} />
                 ))}
             </div>
-            <div className="playhead absolute top-0 bottom-0" style={{ width: 2, background: "var(--warn)", left: time * pps }} />
+            <div className="playhead absolute top-0 bottom-0" style={{ left: time * pps }} />
             <div className="ghost hidden absolute h-[58px] border rounded-lg" />
             <div className="overlap hidden absolute rounded" />
         </div>
@@ -224,7 +221,7 @@ function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEd
 
     return (
         <div
-            className={`clip absolute top-[26px] ${isEditingClip ? 'h-[calc(75vh-40px)]' : 'h-[58px]'} bg-[var(--clip)] border border-[var(--clip-border)] rounded-xl shadow-[var(--shadow)] ${isEditingClip ? 'cursor-default' : 'cursor-grab'} overflow-hidden ${isSelected ? 'ring-2 ring-[var(--hi)]' : ''}`}
+            className={`clip absolute top-[26px] ${isEditingClip ? 'h-[calc(75vh-40px)]' : 'h-[58px]'} border rounded-xl ${isEditingClip ? 'cursor-default' : 'cursor-grab'} overflow-hidden ${isSelected ? 'ring-2 ring-[var(--hi)]' : ''}`}
             style={{ left, width, zIndex, opacity: isEditingClip ? 1 : (useStore.getState().keyframeClipId ? 0.3 : 1) }}
             onClick={handleClick}
             onDoubleClick={handleDoubleClick}
@@ -233,16 +230,16 @@ function ClipComponent({ clip, pps, trackIndex, zIndex, isEditingClip, onCloseEd
             tabIndex={0}
             data-clip-id={clip.id}
         >
-            <div className="name absolute left-2 top-1 text-xs text-[var(--muted)] pointer-events-none">{clip.name}</div>
+            <div className="name absolute left-2 top-1 text-xs pointer-events-none">{clip.name}</div>
             <div className="wfwrap absolute inset-0 overflow-hidden">
                 <canvas className="wf absolute left-0 top-0 h-full w-full" data-peaks={clip.peaks ? JSON.stringify(clip.peaks) : undefined} style={{ opacity: isEditingClip ? 0.25 : 0.6 }}></canvas>
                 {!isEditingClip && Array.isArray(clip.automation) && clip.automation.length > 0 && (
                     <svg className="absolute inset-0 pointer-events-none" viewBox={`0 0 ${width} 58`} preserveAspectRatio="none">
-                        {(() => { const path = pts.map((p: any, i: number) => { const x = (p.t / clip.duration) * width, y = (1 - p.v) * (58); return `${i === 0 ? 'M' : 'L'} ${x} ${y}`; }).join(' '); return <path d={path} stroke="var(--hi)" fill="none" strokeWidth={1.5} /> })()}
+                        {(() => { const path = pts.map((p: any, i: number) => { const x = (p.t / clip.duration) * width, y = (1 - p.v) * (58); return `${i === 0 ? 'M' : 'L'} ${x} ${y}`; }).join(' '); return <path d={path} className="automation-path" /> })()}
                     </svg>
                 )}
                 {isEditingClip && (
-                    <div className="absolute inset-0" style={{ paddingLeft: 6, paddingTop: 8 }}>
+                    <div className="absolute inset-0 keyframe-pad">
                         <KeyframeCanvas clip={clip} pts={pts} onChange={applyPts} onDone={onCloseEdit} />
                     </div>
                 )}
@@ -262,7 +259,7 @@ function KeyframeCanvas({ clip, pts, onChange, onDone }: { clip: any; pts: any[]
     const onUp = () => setDragIdx(null);
     return (
         <div className="absolute left-0 right-0 top-0 bottom-0">
-            <canvas ref={ref} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} style={{ width: '100%', height: '100%', background: 'transparent' }} />
+            <canvas ref={ref} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} className="keyframe-canvas" />
             <div className="absolute right-3 top-3 flex gap-2">
                 <button className="btn" onClick={() => onChange([{ t: 0, v: 1 }, { t: clip.duration, v: 1 }])}>Reset</button>
                 <button className="btn" onClick={onDone}>Done</button>

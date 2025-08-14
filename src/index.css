@@ -6,7 +6,7 @@
   --text: #0f172a;
   --muted: #6b6b6b;
   --panel: #ffffff;
-  --panel2: #ffffff;
+  --panel2: #d3d3d3;
   --panel3: #f7f7f7;
   --border: #dedede;
   --hi: #2563eb;
@@ -22,7 +22,7 @@
   --text: #e7ebf0;
   --muted: #8b9bb0;
   --panel: #0f1318;
-  --panel2: #141a21;
+  --panel: #141a21;
   --panel3: #10151b;
   --border: #223041;
   --hi: #3b82f6;
@@ -52,7 +52,7 @@ body {
 
 .iconbtn:hover {
   background: var(--panel3);
-  border-color: var(--hi);
+  border-color: var(--panel2);
   box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
 }
 
@@ -64,6 +64,12 @@ body {
 .toolbar .range {
   height: 4px;
   width: 120px;
+}
+
+/* Default surface styles for icon-like controls */
+.iconbtn {
+  background: var(--panel);
+  border-color: var(--border);
 }
 
 /* Audio controls in sidebar: remove inner strokes */
@@ -78,7 +84,7 @@ body {
 /* Sidebar collapse button: remove strong stroke */
 .side-top .iconbtn {
   border-color: transparent;
-  background: var(--panel2);
+  background: var(--panel);
 }
 
 .side-top .iconbtn:hover {
@@ -91,11 +97,13 @@ body {
 }
 
 .range {
-  background: var(--panel3);
+  background: var(--panel2);
   border-radius: 4px;
   height: 4px;
   outline: none;
   width: 90px;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .range::-webkit-slider-thumb {
@@ -104,6 +112,36 @@ body {
   border-radius: 50%;
   height: 12px;
   width: 12px;
+  border: none;
+  box-shadow: none;
+  filter: none;
+  outline: none;
+}
+
+/* Firefox */
+.range::-moz-range-thumb {
+  background: var(--hi);
+  border: none;
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+  box-shadow: none;
+}
+
+/* IE/Edge Legacy */
+.range::-ms-thumb {
+  background: var(--hi);
+  border: none;
+  border-radius: 50%;
+  height: 12px;
+  width: 12px;
+  box-shadow: none;
+}
+
+/* Toolbar surface */
+.toolbar {
+  background: var(--panel);
+  border-color: var(--border);
 }
 
 .modal {
@@ -124,7 +162,7 @@ body {
 }
 
 .dialog {
-  background: var(--panel2);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow);
@@ -179,7 +217,7 @@ body {
 }
 
 .chip {
-  background: var(--panel2);
+  background: var(--panel);
   border-color: var(--border);
   color: var(--muted);
   font-size: 12px;
@@ -188,7 +226,7 @@ body {
 }
 
 .toast {
-  background: var(--panel2);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 12px 16px;
@@ -202,6 +240,11 @@ body {
 .toast.error {
   border-color: var(--warn);
   color: var(--warn);
+}
+
+/* Toast container */
+.toasts {
+  z-index: 50;
 }
 
 .clip {
@@ -233,21 +276,19 @@ body {
 }
 
 .trackRow {
-  background: var(--panel2);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 12px;
   transition: all .15s ease;
+  overflow: visible;
+  /* ensure slider thumb shadows are not clipped */
 }
 
-.trackRow:hover {
-  background: var(--panel3);
-  border-color: var(--hi);
-}
 
 .addRow {
   border-style: dashed;
-  color: var(--muted);
+  border-width: 2px;
   cursor: pointer;
   transition: all .15s ease;
 }
@@ -255,5 +296,165 @@ body {
 .addRow:hover {
   border-color: var(--hi);
   color: var(--hi);
+}
+
+/* Ruler */
+.ruler {
   background: var(--panel3);
+  border-color: var(--border);
+}
+
+.ruler .label {
+  color: var(--muted);
+}
+
+.tick-minor,
+.tick-major {
+  position: absolute;
+  width: 1px;
+  background: var(--border);
+}
+
+.tick-minor {
+  top: 22px;
+  height: 30%;
+}
+
+.tick-major {
+  top: 0;
+  height: 100%;
+}
+
+/* Sidebar root */
+.sidebar-root {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+
+.side-top {
+  height: 36px;
+  border-bottom: none;
+}
+
+.stripe {
+  background: var(--hi);
+}
+
+.tname {
+  width: 90px;
+}
+
+/* Track lane */
+.scroller {
+  background: var(--panel);
+}
+
+.track {
+  border-color: var(--border);
+  transition: height .25s ease;
+}
+
+.track .title {
+  color: var(--muted);
+}
+
+.newTrackZone {
+  height: 96px;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.newTrackZone:hover {
+  border-color: var(--hi);
+}
+
+.playhead {
+  width: 2px;
+  background: var(--warn);
+}
+
+.clip .name {
+  color: var(--muted);
+}
+
+.clip {
+  background: var(--clip);
+  border: 1px solid var(--clip-border);
+  box-shadow: var(--shadow);
+}
+
+.automation-path {
+  stroke: var(--hi);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.keyframe-canvas {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.keyframe-pad {
+  padding-left: 6px;
+  padding-top: 8px;
+}
+
+/* Context menu */
+.ctxmenu {
+  position: fixed;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  z-index: 9999;
+}
+
+.ctx-item {
+  padding: 5px 15px;
+  cursor: pointer;
+}
+
+.ctx-item:hover {
+  background: var(--panel3);
+}
+
+/* Automation modal */
+.automation-shell {
+  top: 60px;
+  height: 75vh;
+}
+
+.panel-surface {
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+
+.automation-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  background: var(--panel3);
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* Muted text */
+.muted {
+  color: var(--muted);
+}
+
+/* Dim overlay utility */
+.overlay-dim {
+  background: rgba(0, 0, 0, .6);
+  z-index: 9998;
+}
+
+/* Fixed heights */
+.trackRowHeight {
+  height: 88px;
 }

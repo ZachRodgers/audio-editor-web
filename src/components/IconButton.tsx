@@ -11,7 +11,6 @@ export const IconButton = forwardRef<HTMLButtonElement, Props>(function IconButt
     <button
       ref={ref}
       className={`iconbtn inline-flex items-center justify-center w-9 h-9 rounded-xl border ${className ?? ''}`}
-      style={{ background: 'var(--panel2)', borderColor: 'var(--border)' }}
       title={title}
       {...rest}
     >

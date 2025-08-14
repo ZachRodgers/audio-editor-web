@@ -87,11 +87,11 @@ export function AutomationModal() {
     const reset = () => applyPoints([{ t: 0, v: 1 }, { t: clip.duration, v: 1 }]);
 
     return (
-        <div ref={overlayRef} className={`fixed inset-0 ${keyframeClipId ? '' : 'hidden'}`} style={{ background: 'rgba(0,0,0,.6)', zIndex: 9998 }} onMouseDown={(e) => { if (e.target === overlayRef.current) close(); }}>
-            <div className="absolute left-0 right-0" style={{ top: 60, height: '75vh', pointerEvents: 'auto' }}>
-                <div className="relative mx-6 rounded-xl border" style={{ background: 'var(--panel2)', borderColor: 'var(--border)', height: '100%' }}>
-                    <div className="absolute inset-0" style={{ padding: 12 }}>
-                        <canvas ref={canvasRef} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} style={{ width: '100%', height: '100%', borderRadius: 10, background: 'var(--panel3)', padding: 10, boxSizing: 'border-box' }} />
+        <div ref={overlayRef} className={`overlay-dim fixed inset-0 ${keyframeClipId ? '' : 'hidden'}`} onMouseDown={(e) => { if (e.target === overlayRef.current) close(); }}>
+            <div className="absolute left-0 right-0 automation-shell pointer-events-auto">
+                <div className="relative mx-6 rounded-xl border panel-surface h-full">
+                    <div className="absolute inset-0 p-3">
+                        <canvas ref={canvasRef} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} className="automation-canvas" />
                     </div>
                     <div className="absolute right-3 top-3 flex gap-2">
                         <button className="btn" onClick={reset}>Reset</button>
