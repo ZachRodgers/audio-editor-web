@@ -53,7 +53,7 @@ type State = {
   deleteClip: (id: string) => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (v: boolean) => void;
-  toast: (text: string, err?: boolean) => void;
+  toast: (text: string, err?: boolean, duration?: number) => void;
   setTime: (t: number) => void;
   play: () => void;
   pause: () => void;
@@ -233,10 +233,19 @@ export const useStore = create<State>((set, get) => ({
     }),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarCollapsed: (v) => set(() => ({ sidebarCollapsed: v })),
-  toast: (text, err) =>
-    set((s) => ({
-      toasts: [...s.toasts, { id: Date.now() + Math.random(), text, err }],
-    })),
+  toast: (text, err, duration = 10000) =>
+    set((s) => {
+      const id = Date.now() + Math.random();
+      const toast = { id, text, err };
+      setTimeout(() => {
+        set((s) => ({
+          toasts: s.toasts.filter((t) => t.id !== id),
+        }));
+      }, duration);
+      return {
+        toasts: [...s.toasts, toast],
+      };
+    }),
   setTime: (t) =>
     set((s) => ({ transport: { ...s.transport, time: Math.max(0, t) } })),
   play: () =>

@@ -6,6 +6,7 @@ import { Ruler } from './components/Ruler'
 import { TrackLane } from './components/TrackLane'
 import { Toasts } from './components/Toasts'
 import { useStore } from './state/store'
+import { initPersistence } from './state/persist'
 import { useHotkeys } from './hooks/useHotkeys'
 import { ensureAudioScheduler, onPause } from './audio/scheduler'
 import { snapTime } from './audio/snapping'
@@ -14,6 +15,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(true)
   const playing = useStore(s => s.transport.playing)
   useEffect(() => {
+    initPersistence()
     const t = (localStorage.getItem('mini-audio-theme') || 'dark') as 'dark' | 'light'
     document.documentElement.setAttribute('data-theme', t)
     setIsDark(t === 'dark')

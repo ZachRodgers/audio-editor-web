@@ -9,12 +9,12 @@ A modern, fast audio editor built with React, TypeScript, and the Web Audio API.
 - **Clip Editing**: select, move, split, duplicate, delete, copy, paste, undo, redo
 - **Volume Keyframing**: double click to add keyframe to volume levels
 - **Overlap Protection**: overlapping tracks will not be deleted and instead shown in red
+- **Project Memory**: project is saved in browser memory to not lose changes
 
 ## Upcoming Features
 
 - Clips from URLs
 - Project saving
-- Project browser memory
 - betterwave form rendering (to not show full)
 
 ## Getting Started

@@ -1,7 +1,8 @@
-import { Sun, Moon, Plus, SkipBack, SkipForward, Play, Pause, Undo2, Redo2, Copy, ClipboardPaste, Files, Keyboard, Scissors, Trash2 } from "lucide-react";
+import { Sun, Moon, Plus, SkipBack, SkipForward, Play, Pause, Undo2, Redo2, Copy, ClipboardPaste, Files, Keyboard, Scissors, Trash2, Download } from "lucide-react";
 import { IconButton } from "./IconButton";
 import { useStore } from "../state/store";
 import { KeybindsModal } from "./KeybindsModal";
+import { exportProjectToMp3 } from "../audio/export";
 
 export function Toolbar({ isDark, onToggleTheme }: { isDark: boolean; onToggleTheme: () => void }) {
   const setTime = useStore(s => s.setTime);
@@ -39,6 +40,19 @@ export function Toolbar({ isDark, onToggleTheme }: { isDark: boolean; onToggleTh
             }} />
             <Plus className="w-4 h-4" />
           </label>
+          <IconButton title="Download MP3" onClick={async () => {
+            try {
+              const blob = await exportProjectToMp3();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'audioeditorweb.mp3';
+              document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              setTimeout(() => URL.revokeObjectURL(url), 0);
+            } catch (err) {
+              console.error(err);
+              useStore.getState().toast('Export failed', true, 5000);
+            }
+          }}><Download className="w-4 h-4" /></IconButton>
           <IconButton title="Duplicate" onClick={() => { const s = useStore.getState(); if (s.selectedClipId) { s.copyClip(s.selectedClipId); const ti = s.tracks.findIndex(t => t.clips.some(c => c.id === s.selectedClipId)); s.pasteAt(s.transport.time, ti >= 0 ? ti : 0); } }}><Files className="w-4 h-4" /></IconButton>
           <IconButton title="Copy" onClick={() => { const s = useStore.getState(); if (s.selectedClipId) s.copyClip(s.selectedClipId); }}><Copy className="w-4 h-4" /></IconButton>
           <IconButton title="Paste" onClick={() => { const s = useStore.getState(); let idx = 0; if (s.selectedClipId) { const ti = s.tracks.findIndex(t => t.clips.some(c => c.id === s.selectedClipId)); if (ti >= 0) idx = ti; } if (s.clipboard) s.pasteAt(s.transport.time, idx); }}><ClipboardPaste className="w-4 h-4" /></IconButton>
