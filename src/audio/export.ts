@@ -7,25 +7,6 @@ declare global {
   }
 }
 
-function sampleAutomation(
-  points: { t: number; v: number }[] | undefined,
-  t: number
-): number {
-  if (!points || points.length === 0) return 1;
-  const pts = points.slice().sort((a, b) => a.t - b.t);
-  if (t <= pts[0].t) return pts[0].v;
-  if (t >= pts[pts.length - 1].t) return pts[pts.length - 1].v;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const a = pts[i],
-      b = pts[i + 1];
-    if (t >= a.t && t <= b.t) {
-      const u = (t - a.t) / Math.max(1e-6, b.t - a.t);
-      return a.v + (b.v - a.v) * u;
-    }
-  }
-  return 1;
-}
-
 async function renderOfflineToBuffer(maxSeconds = 600): Promise<AudioBuffer> {
   const s = useStore.getState();
   const endSec = Math.min(
@@ -38,7 +19,6 @@ async function renderOfflineToBuffer(maxSeconds = 600): Promise<AudioBuffer> {
   const sampleRate = 44100;
   const channels = 2;
   const length = Math.max(1, Math.ceil(endSec * sampleRate));
-  // @ts-expect-error web audio global
   const ctx = new (window.OfflineAudioContext ||
     (window as any).webkitOfflineAudioContext)(channels, length, sampleRate);
   const master = ctx.createGain();
