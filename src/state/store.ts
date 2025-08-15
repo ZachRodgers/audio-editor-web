@@ -306,13 +306,29 @@ export const useStore = create<State>((set, get) => ({
         const clip = t.clips[clipIndex];
         const splitTime = time - clip.start;
         if (splitTime <= 0 || splitTime >= clip.duration) return {} as any;
-        const leftClip = { ...clip, duration: splitTime };
+        const totalPeaks = clip.peaks?.length ?? 0;
+        const leftCount =
+          totalPeaks > 0
+            ? Math.max(
+                0,
+                Math.min(
+                  totalPeaks,
+                  Math.round((splitTime / clip.duration) * totalPeaks)
+                )
+              )
+            : 0;
+        const leftClip = {
+          ...clip,
+          duration: splitTime,
+          peaks: totalPeaks > 0 ? clip.peaks!.slice(0, leftCount) : clip.peaks,
+        };
         const rightClip = {
           ...clip,
           id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           start: clip.start + splitTime,
           offset: clip.offset + splitTime,
           duration: clip.duration - splitTime,
+          peaks: totalPeaks > 0 ? clip.peaks!.slice(leftCount) : clip.peaks,
         };
         const prev = s.tracks;
         let next = s.tracks.map((tr) =>
@@ -345,13 +361,29 @@ export const useStore = create<State>((set, get) => ({
         t.clips.forEach((c) => {
           const rel = time - c.start;
           if (rel > 0 && rel < c.duration) {
-            out.push({ ...c, duration: rel });
+            const totalPeaks = c.peaks?.length ?? 0;
+            const leftCount =
+              totalPeaks > 0
+                ? Math.max(
+                    0,
+                    Math.min(
+                      totalPeaks,
+                      Math.round((rel / c.duration) * totalPeaks)
+                    )
+                  )
+                : 0;
+            out.push({
+              ...c,
+              duration: rel,
+              peaks: totalPeaks > 0 ? c.peaks!.slice(0, leftCount) : c.peaks,
+            });
             out.push({
               ...c,
               id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
               start: c.start + rel,
               offset: c.offset + rel,
               duration: c.duration - rel,
+              peaks: totalPeaks > 0 ? c.peaks!.slice(leftCount) : c.peaks,
             });
           } else {
             out.push(c);

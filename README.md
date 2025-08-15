@@ -15,7 +15,6 @@ A modern, fast audio editor built with React, TypeScript, and the Web Audio API.
 
 - Clips from URLs
 - Project saving
-- betterwave form rendering (to not show full)
 
 ## Getting Started
 
