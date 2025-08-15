@@ -1,6 +1,9 @@
+VERSION 0.1
+
 # Audio Editor
 
-A modern, fast audio editor built with React, TypeScript, and the Web Audio API.
+Simple Web Based Audio Editing because my gf wanted to edit audio and everythign is either too complex or cost money.
+Available for free at audio.zachrodgers.ca
 
 ## Features
 
